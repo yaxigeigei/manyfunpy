@@ -46,7 +46,7 @@ def convert_nwb_to_nap(
             nap_objects[key] = nwb_nap[key]
 
     # Build analog objects
-    anin = process_anin(nwb_nap["TimeSeriesNIDQ"], nwb_nap["Denoised Mic (.wav)"])
+    anin = process_anin(nwb_nap["TimeSeriesNIDQ"], nwb_nap.get("Denoised Mic (.wav)", None))
     mel_speaker = compute_mel_spectrogram(anin["speaker"], "speaker")
     mel_mic = compute_mel_spectrogram(anin["mic"], "mic")
     nap_objects.update({
@@ -94,27 +94,30 @@ def convert_nwb_to_nap(
     return nap_objects, metadata
 
 
-def process_anin(nidq: nap.TsdFrame, mic_denoised: nap.Tsd) -> nap.TsdFrame:
+def process_anin(nidq: nap.TsdFrame, mic_denoised: nap.Tsd | None = None) -> nap.TsdFrame:
     """Process the analog input data."""
     from manyfunpy.data.audio import estimate_sample_rate, highpass_speech
 
     t_nidq = nidq.times()
     fs_nidq = estimate_sample_rate(t_nidq)
 
-    # Resample denoised mic to NIDQ timestamps (matches ReplaceMicAudio in SEMaker.m)
-    t_mic = mic_denoised.times()
-    interp_mic = interp1d(
-        t_mic,
-        mic_denoised.values,
-        kind="linear",
-        fill_value=0.0,
-        bounds_error=False,
-    )
-    mic_resampled = interp_mic(t_nidq)
+    if mic_denoised is not None:
+        # Resample denoised mic to NIDQ timestamps (matches ReplaceMicAudio in SEMaker.m)
+        t_mic = mic_denoised.times()
+        interp_mic = interp1d(
+            t_mic,
+            mic_denoised.values,
+            kind="linear",
+            fill_value=0.0,
+            bounds_error=False,
+        )
+        mic_signal = interp_mic(t_nidq)
+    else:
+        mic_signal = nidq[:, MIC_CHAN].values
 
     # Read the hardcoded channels
     speaker = highpass_speech(nidq[:, SPEAKER_CHAN].values, fs_nidq)
-    mic = highpass_speech(mic_resampled, fs_nidq)
+    mic = highpass_speech(mic_signal, fs_nidq)
     data = [speaker, mic]
     columns = ["speaker", "mic"]
 
