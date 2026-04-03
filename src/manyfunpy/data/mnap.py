@@ -40,49 +40,82 @@ def warp_nap(nap_data, interpolant, sample_rate=None):
     Build time-warped nap dictionary by warping all supported fields.
 
     Currently warps:
+    - pynapple.Tsd
     - pynapple.TsdFrame
     - pynapple.IntervalSet
     """
     # Apply interpolant across data containers
-    morphed_data = {}
+    warped_data = {}
     for key, value in nap_data.items():
-        if isinstance(value, nap.TsdFrame):
-            morphed_data[key] = warp_tsdframe(value, interpolant, sample_rate=sample_rate)
+        if isinstance(value, nap.Tsd):
+            warped_data[key] = warp_tsd(value, interpolant, sample_rate=sample_rate)
+        elif isinstance(value, nap.TsdFrame):
+            warped_data[key] = warp_tsdframe(value, interpolant, sample_rate=sample_rate)
         elif isinstance(value, nap.IntervalSet):
-            morphed_data[key] = warp_interval_set(value, interpolant)
+            warped_data[key] = warp_interval_set(value, interpolant)
         else:
-            morphed_data[key] = value
+            warped_data[key] = value
     
-    return morphed_data
+    return warped_data
+
+def warp_tsd(tsd, interpolant, sample_rate=None):
+    """
+    Apply a time-warping interpolant to transform timestamps in a Tsd.
+    """
+    warped_times = interpolant(tsd.times())
+    warped_support = warp_interval_set(tsd.time_support, interpolant)
+    warped_tsd = nap.Tsd(
+        t=warped_times,
+        d=tsd.values,
+        time_support=warped_support,
+    )
+
+    if sample_rate is not None:
+        warped_tsd = warped_tsd.bin_average(1 / sample_rate)
+        t = warped_tsd.times()
+        d = warped_tsd.values.copy()
+        valid = np.isfinite(d)
+        if valid.any():
+            d = np.interp(t, t[valid], d[valid])
+        warped_tsd = nap.Tsd(
+            t=t,
+            d=d,
+            time_support=warped_tsd.time_support,
+        )
+
+    return warped_tsd
 
 def warp_tsdframe(tsdframe, interpolant, sample_rate=None):
     """
     Apply a time-warping interpolant to transform timestamps in a TsdFrame.
     """
     warped_times = interpolant(tsdframe.times())
-    tsdframe_morphed = nap.TsdFrame(
+    warped_support = warp_interval_set(tsdframe.time_support, interpolant)
+    warped_tsdframe = nap.TsdFrame(
         t=warped_times,
         d=tsdframe.values,
         columns=tsdframe.columns,
+        time_support=warped_support,
         metadata=tsdframe.metadata.copy()
     )
 
     if sample_rate is not None:
-        tsdframe_morphed = tsdframe_morphed.bin_average(1 / sample_rate)
-        t = tsdframe_morphed.times()
-        d = tsdframe_morphed.values.copy()
+        warped_tsdframe = warped_tsdframe.bin_average(1 / sample_rate)
+        t = warped_tsdframe.times()
+        d = warped_tsdframe.values.copy()
         for i in range(d.shape[1]):
             valid = np.isfinite(d[:, i])
             if valid.any():
                 d[:, i] = np.interp(t, t[valid], d[valid, i])
-        tsdframe_morphed = nap.TsdFrame(
+        warped_tsdframe = nap.TsdFrame(
             t=t,
             d=d,
-            columns=tsdframe_morphed.columns,
-            metadata=tsdframe_morphed.metadata.copy(),
+            columns=warped_tsdframe.columns,
+            time_support=warped_tsdframe.time_support,
+            metadata=warped_tsdframe.metadata.copy(),
         )
     
-    return tsdframe_morphed
+    return warped_tsdframe
 
 def warp_interval_set(interval_set, interpolant):
     """
@@ -90,10 +123,9 @@ def warp_interval_set(interval_set, interpolant):
     """
     starts = interpolant(np.asarray(interval_set.start, dtype=float))
     ends = interpolant(np.asarray(interval_set.end, dtype=float))
-    warped_interval = nap.IntervalSet(
+    warped_interval_set = nap.IntervalSet(
         start=starts,
         end=ends,
         metadata=interval_set.metadata.copy()
     )
-    return warped_interval
-
+    return warped_interval_set

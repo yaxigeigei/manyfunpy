@@ -7,16 +7,17 @@ import pynapple as nap
 from natsort import natsorted
 from scipy.interpolate import interp1d
 
+
 # SpikeGLX NIDQ analog input channel definitions.
 MIC_CHAN = 1
 SPEAKER_CHAN = 2
 PDIODE_CHAN = 4
+DEFAULT_SURFACE_LOCATION = 7660.0
 
 
 def convert_nwb_to_nap(
     nwb, 
     ks_suffix: str = "_KS4_Th=8",
-    min_num_spikes: int = 0,
     ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     """Convert NWB data to nap objects and metadata."""
     from manyfunpy.data.audio import compute_mel_spectrogram
@@ -83,11 +84,13 @@ def convert_nwb_to_nap(
         nap_objects.update({"artic2": artic2})
 
     # Build spike times
-    spike_times = build_spike_times(nwb_nap, ks_suffix, min_num_spikes)
-    num_units = len(spike_times)
+    spike_times = build_spike_times(
+        nwb_nap,
+        ks_suffix,
+        surface_location=recording_meta["Surface location"],
+    )
     spike_times.set_info({
-        "rec_id": np.repeat(raw_nwb.identifier, num_units),
-        "region": np.repeat(recording_meta["Region"], num_units),
+        "region": np.repeat(recording_meta["Region"], len(spike_times)),
     })
     nap_objects["spike_times"] = spike_times
 
@@ -132,21 +135,48 @@ def process_anin(nidq: nap.TsdFrame, mic_denoised: nap.Tsd | None = None) -> nap
     return anin
 
 
-def build_spike_times(nwb_nap, ks_suffix: str, min_num_spikes: int = 0) -> nap.TsGroup:
-    # Select one sorting group per probe.
+def build_spike_times(nwb_nap, ks_suffix: str, surface_location=None) -> nap.TsGroup:
+    
+    # Select one sorting group per probe
     selected_keys = select_ks_keys(nwb_nap, ks_suffix)
 
-    # Get probe TsGroup objects
-    probes = [nwb_nap[key] for key in selected_keys]
+    # Extract info
+    rec_id = nwb_nap.nwb.identifier
+    surface_location = parse_surface_location(surface_location)
+    
+    # Loop through probes
+    probes = []
+    for sort_name in selected_keys:
+        probe = nwb_nap[sort_name]
+        probe_index = int(re.search(r"imec(\d+)", sort_name).group(1))
 
+        probe_meta = probe.metadata.copy().drop(columns=["rate"])
+        probe_meta["rec_id"] = np.repeat(rec_id, len(probe_meta))
+        probe_meta["probe_index"] = np.repeat(probe_index, len(probe_meta))
+        probe_meta["sort_name"] = np.repeat(sort_name, len(probe_meta))
+        
+        # Derive unique cluster IDs
+        cluster_ids = probe_meta["unit_name"].to_numpy(dtype=int)
+        unique_cluster_ids = convert_to_unique_cluster_ids(
+            cluster_ids=cluster_ids,
+            rec_id=rec_id, 
+            probe_index=probe_index,
+            )
+        probe_meta.index = unique_cluster_ids
+        
+        # Convert cortical depth
+        probe_meta = convert_cortical_depth(probe_meta, surface_location, probe_index)
+        
+        # Rebuild the probe with unique cluster IDs
+        probe_group = {}
+        for old_key, new_key in zip(probe.keys(), unique_cluster_ids):
+            probe_group[int(new_key)] = probe[old_key]
+        probe = nap.TsGroup(probe_group, time_support=probe.time_support, metadata=probe_meta)
+
+        probes.append(probe)
+    
     # Merge probes
-    merged = nap.TsGroup.merge_group(*probes, reset_index=True, reset_time_support=True)
-
-    # Drop low-spike units.
-    num_spikes = np.array([len(st) for st in merged.values()], dtype=int)
-    mask = num_spikes >= min_num_spikes
-    merged = merged[mask]
-
+    merged = nap.TsGroup.merge_group(*probes, reset_index=False, reset_time_support=True)
     return merged
 
 def select_ks_keys(nwb_nap, ks_suffix: str) -> list[str]:
@@ -184,6 +214,65 @@ def select_ks_keys(nwb_nap, ks_suffix: str) -> list[str]:
         selected.append(sorted(candidates, key=_candidate_rank)[0])
 
     return selected
+
+def convert_to_unique_cluster_ids(cluster_ids: np.ndarray, rec_id: str, probe_index: int) -> np.ndarray:
+    """Convert cluster IDs to unique cluster IDs."""
+    rec_base_num = get_rec_base_num(rec_id)
+    probe_base_num = probe_index * 1e4
+    unique_cluster_ids = rec_base_num + probe_base_num + cluster_ids
+    return unique_cluster_ids
+
+def get_rec_base_num(rec_id: str) -> int:
+    """Get the recording-specific cluster-ID base (e.g. 'NP1_B1' -> 10100000)."""
+    match = re.fullmatch(r"NP(\d+)_B(\d+)", rec_id)
+    subject_number = int(match.group(1))
+    block_number = int(match.group(2))
+    return int(subject_number * 1e7 + block_number * 1e5)
+
+
+def convert_cortical_depth(unit_meta, surface_location, probe_index: int):
+    """Convert distance-to-tip coordinates to cortical depth."""
+    if "depth" not in unit_meta.columns:
+        print("Skipping cortical depth conversion because spike_times.metadata has no 'depth' column.")
+        return unit_meta
+    if surface_location is None:
+        print("Skipping cortical depth conversion because no surface location was provided.")
+        return unit_meta
+
+    surface_location = np.atleast_1d(np.asarray(surface_location, dtype=float))
+    if surface_location.size == 1:
+        surface_value = surface_location[0]
+    else:
+        surface_value = surface_location[probe_index]
+
+    distance_to_tip = unit_meta["depth"].to_numpy(dtype=float, copy=True)
+    unit_meta["distance_to_tip"] = distance_to_tip
+    unit_meta["cortical_depth"] = -(distance_to_tip - surface_value)
+
+    return unit_meta
+
+def parse_surface_location(surface_location) -> np.ndarray:
+    """Normalize surface locations to a numeric probe array."""
+    # Use the default when the input is missing
+    if surface_location is None:
+        return np.array([DEFAULT_SURFACE_LOCATION], dtype=float)
+
+    # Parse string-encoded values
+    if isinstance(surface_location, str):
+        try:
+            surface_location = eval(surface_location, {"__builtins__": {}}, {"NaN": np.nan, "nan": np.nan})
+        except Exception:
+            print(f"Cannot parse surface location from '{surface_location}'. Using default value of {DEFAULT_SURFACE_LOCATION}.")
+            surface_location = DEFAULT_SURFACE_LOCATION
+    surface_location = np.atleast_1d(np.asarray(surface_location, dtype=float))
+
+    # Fill missing entries or fall back entirely
+    is_missing = np.isnan(surface_location)
+    if np.any(is_missing):
+        print(f"Filling missing surface locations with default value of {DEFAULT_SURFACE_LOCATION}.")
+        surface_location[is_missing] = DEFAULT_SURFACE_LOCATION
+
+    return surface_location
 
 
 def save_nap_dataset(
