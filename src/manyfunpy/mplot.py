@@ -7,6 +7,8 @@ according to publication standards, similar to MATLAB's plotting utilities.
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
 from typing import Union, Optional, List, Tuple
 import numpy as np
 
@@ -125,6 +127,58 @@ def paperize(
             # Set spine properties
             for spine in ax.spines.values():
                 spine.set_linewidth(0.5)
+
+
+def plot_interval_blocks(
+    ax,
+    x_ranges,
+    y_centers=None,
+    heights=None,
+    y_ranges=None,
+    colors=None,
+    alpha=1.0,
+    edgecolor="none",
+    linewidth=0,
+    zorder=None,
+):
+    """
+    Plot interval blocks as a patch collection of rectangles.
+    """
+    # Normalize interval coordinates.
+    x_ranges = np.asarray(x_ranges, dtype=float)
+    if y_ranges is None:
+        y_centers = np.asarray(y_centers, dtype=float)
+        heights = np.asarray(heights, dtype=float)
+        y_ranges = np.column_stack((y_centers - heights / 2, y_centers + heights / 2))
+    else:
+        y_ranges = np.asarray(y_ranges, dtype=float)
+
+    # Normalize face colors.
+    facecolors = mpl.colors.to_rgba_array(colors if colors is not None else (0.5, 0.5, 0.5))
+    if len(facecolors) == 1:
+        facecolors = np.repeat(facecolors, len(x_ranges), axis=0)
+
+    # Build rectangle patches.
+    rectangles = [
+        Rectangle(
+            (x0, y0),
+            x1 - x0,
+            y1 - y0,
+        )
+        for (x0, x1), (y0, y1) in zip(x_ranges, y_ranges)
+    ]
+
+    # Add the patch collection to the axis.
+    collection = PatchCollection(
+        rectangles,
+        facecolors=facecolors,
+        edgecolors=edgecolor,
+        linewidths=linewidth,
+        alpha=alpha,
+        zorder=zorder,
+    )
+    ax.add_collection(collection)
+    return collection
 
 def get_journal_dimensions(journal_style: str = 'cell') -> dict:
     """
