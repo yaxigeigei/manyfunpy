@@ -6,17 +6,20 @@ import numpy as np
 import pynapple as nap
 
 
-def save_nap_objects(nap_objects: dict[str, Any], output_dir: str | Path):
+def save_nap_objects(nap_objects: dict[str, Any], output_dir: str | Path, verbose: bool = False):
     """Save pynapple data to a directory."""
     output_dir = Path(output_dir)
 
     if output_dir.exists():
-        print(f"Removing existing pynapple data directory {output_dir}")
+        if verbose:
+            print(f"Removing existing pynapple data directory {output_dir}")
         _remove_dir_with_retries(output_dir)
     
     output_dir.mkdir(parents=True, exist_ok=True)
     for key, value in nap_objects.items():
         value.save(output_dir / f"{key}.npz")
+        if verbose:
+            print(f"Saved {output_dir / f'{key}.npz'}")
 
 def _remove_dir_with_retries(path: Path, retries: int = 8, delay_s: float = 0.25) -> None:
     """Remove a directory, retrying around transient Windows file locks."""
