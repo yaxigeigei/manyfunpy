@@ -203,6 +203,7 @@ def build_spike_times(nwb_nap, ks_suffix: str, surface_location=None) -> nap.TsG
             probe_index=probe_index,
             )
         probe_meta.index = unique_cluster_ids
+        probe_meta["unit_id"] = unique_cluster_ids
         probe_meta["unit_name"] = unique_cluster_ids.astype(str)
         
         # Rebuild the probe with updated metadata
