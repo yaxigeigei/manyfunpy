@@ -5,12 +5,38 @@ This module provides functions to format matplotlib figures and axes
 according to publication standards, similar to MATLAB's plotting utilities.
 """
 
-import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from typing import Union, Optional, List, Tuple
-import numpy as np
+
+
+def save_figure(
+    fig,
+    out_path,
+    extensions: str | list[str] = None,
+    is_verbose=True,
+    ):
+    """
+    Save a figure to a file.
+    """
+    out_path = Path(out_path)
+
+    if extensions is None:
+        extensions = out_path.suffixes
+    if len(extensions) == 0:
+        extensions = ["png"]
+    if isinstance(extensions, str):
+        extensions = [extensions]
+    
+    for ext in extensions:
+        out_path = out_path.with_suffix(f".{ext.strip('.')}")
+        fig.savefig(out_path, dpi=300, bbox_inches="tight")
+        if is_verbose:
+            print(f"Saved: {out_path}")
 
 
 def paperize(
