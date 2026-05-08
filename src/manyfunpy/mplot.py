@@ -11,10 +11,10 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
-from typing import Union, Optional, List, Tuple
+from typing import Union, Optional, List
 
 
-def save_figure(
+def savefig(
     fig,
     out_path,
     extensions: str | list[str] = None,
