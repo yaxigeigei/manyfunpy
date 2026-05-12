@@ -8,8 +8,10 @@ version = "0.1.0"
 description = "Utility functions for plotting and GUI helpers."
 requires-python = ">=3.9"
 dependencies = [
+    "joblib",
     "matplotlib",
     "numpy",
+    "scikit-learn",
 ]
 
 [tool.setuptools]

@@ -1,3 +1,3 @@
 """manyfunpy package."""
 
-__all__ = ["gui", "mplot", "mnap"]
+__all__ = ["gui", "mplot", "mnap", "stats"]
