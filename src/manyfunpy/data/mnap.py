@@ -1,12 +1,21 @@
 import shutil
 import time
+from collections.abc import Callable, Mapping
 from typing import Any
 from pathlib import Path
 import numpy as np
 import pynapple as nap
 
 
-def save_nap_objects(nap_objects: dict[str, Any], output_dir: str | Path, verbose: bool = False):
+TimeInterpolant = Callable[[np.ndarray], np.ndarray]
+
+
+def save_nap_objects(
+    nap_objects: Mapping[str, Any],
+    output_dir: str | Path,
+    *,
+    verbose: bool = False,
+) -> None:
     """Save pynapple data to a directory."""
     output_dir = Path(output_dir)
 
@@ -38,7 +47,12 @@ def _remove_dir_with_retries(path: Path, retries: int = 8, delay_s: float = 0.25
     ) from last_error
 
 
-def warp_nap(nap_data, interpolant, sample_rate=None):
+def warp_nap(
+    nap_data: Mapping[str, Any],
+    interpolant: TimeInterpolant,
+    *,
+    sample_rate: float | None = None,
+) -> dict[str, Any]:
     """
     Build time-warped nap dictionary by warping all supported fields.
 
@@ -61,7 +75,12 @@ def warp_nap(nap_data, interpolant, sample_rate=None):
     
     return warped_data
 
-def warp_tsd(tsd, interpolant, sample_rate=None):
+def warp_tsd(
+    tsd: nap.Tsd,
+    interpolant: TimeInterpolant,
+    *,
+    sample_rate: float | None = None,
+) -> nap.Tsd:
     """
     Apply a time-warping interpolant to transform timestamps in a Tsd.
     """
@@ -88,7 +107,12 @@ def warp_tsd(tsd, interpolant, sample_rate=None):
 
     return warped_tsd
 
-def warp_tsdframe(tsdframe, interpolant, sample_rate=None):
+def warp_tsdframe(
+    tsdframe: nap.TsdFrame,
+    interpolant: TimeInterpolant,
+    *,
+    sample_rate: float | None = None,
+) -> nap.TsdFrame:
     """
     Apply a time-warping interpolant to transform timestamps in a TsdFrame.
     """
@@ -120,7 +144,10 @@ def warp_tsdframe(tsdframe, interpolant, sample_rate=None):
     
     return warped_tsdframe
 
-def warp_interval_set(interval_set, interpolant):
+def warp_interval_set(
+    interval_set: nap.IntervalSet,
+    interpolant: TimeInterpolant,
+) -> nap.IntervalSet:
     """
     Applying a time-warping interpolant to transform timestamps in an IntervalSet.
     """

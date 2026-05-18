@@ -1,10 +1,16 @@
 """
 Sequence alignment utilities.
 """
+from collections.abc import Iterable
+from typing import TypeVar
+
 import numpy as np
 
 
-def matched_index_pairs(seq1, seq2):
+Token = TypeVar("Token")
+
+
+def matched_index_pairs(seq1: Iterable[Token], seq2: Iterable[Token]) -> tuple[np.ndarray, np.ndarray]:
     """
     Return matched token indices from the longest common subsequence.
     """
@@ -40,7 +46,12 @@ def matched_index_pairs(seq1, seq2):
     return np.asarray(idx1, dtype=int), np.asarray(idx2, dtype=int)
 
 
-def align_tokens(seq1, seq2, gap=None):
+def align_tokens(
+    seq1: Iterable[Token],
+    seq2: Iterable[Token],
+    *,
+    gap: object | None = None,
+) -> tuple[list[object], list[object]]:
     """
     Return two aligned token lists with gap placeholders.
     """
@@ -79,7 +90,12 @@ def align_tokens(seq1, seq2, gap=None):
     return aligned1, aligned2
 
 
-def matched_times(seq1, times1, seq2, times2):
+def matched_times(
+    seq1: Iterable[Token],
+    times1: np.ndarray,
+    seq2: Iterable[Token],
+    times2: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Return matched times for two token-time sequences.
     """

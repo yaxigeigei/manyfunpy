@@ -6,10 +6,22 @@ GUI utility functions for SEMSR
 This module contains functions for creating GUI dialogs and interfaces.
 """
 
+from collections.abc import Sequence
+from typing import TypeVar
+
 import tkinter as tk
 from tkinter import ttk
 
-def create_selection_dialog(title, items, multiple=True):
+
+SelectionItem = TypeVar("SelectionItem")
+
+
+def create_selection_dialog(
+    title: str,
+    items: Sequence[SelectionItem],
+    *,
+    multiple: bool = True,
+) -> list[SelectionItem]:
     """Create a dialog with listbox for selection
     
     Parameters
@@ -56,4 +68,4 @@ def create_selection_dialog(title, items, multiple=True):
     
     root.mainloop()
     root.destroy()
-    return selected_items 
+    return selected_items

@@ -1,5 +1,6 @@
 import json
 import re
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 import numpy as np
@@ -12,12 +13,15 @@ from scipy.interpolate import interp1d
 MIC_CHAN = 1
 SPEAKER_CHAN = 2
 PDIODE_CHAN = 4
+SpikeSortSuffix = str | list[str] | dict[str, str]
+SurfaceLocation = float | str | Sequence[float] | np.ndarray | None
 
 
 def convert_nwb_to_nap(
     nwb: str | Path | nap.NWBFile, 
-    ks_suffix: str | list[str] | dict[str, str] = "_KS4_Th=8",
-    ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    *,
+    ks_suffix: SpikeSortSuffix = "_KS4_Th=8",
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     """
     Convert NWB data to nap objects and metadata.
     Args:
@@ -54,7 +58,10 @@ def convert_nwb_to_nap(
             nap_objects[key] = nwb_nap[key]
 
     # Build analog objects
-    anin = process_anin(nwb_nap["TimeSeriesNIDQ"], nwb_nap.get("Denoised Mic (.wav)", None))
+    anin = process_anin(
+        nwb_nap["TimeSeriesNIDQ"],
+        mic_denoised=nwb_nap.get("Denoised Mic (.wav)", None),
+    )
     mel_speaker = compute_mel_spectrogram(anin["speaker"], "speaker")
     mel_mic = compute_mel_spectrogram(anin["mic"], "mic")
     nap_objects.update({
@@ -111,7 +118,11 @@ def convert_nwb_to_nap(
     return nap_objects, metadata
 
 
-def process_anin(nidq: nap.TsdFrame, mic_denoised: nap.Tsd | None = None) -> nap.TsdFrame:
+def process_anin(
+    nidq: nap.TsdFrame,
+    *,
+    mic_denoised: nap.Tsd | None = None,
+) -> nap.TsdFrame:
     """Process the analog input data."""
     from manyfunpy.data.audio import estimate_sample_rate, highpass_speech
 
@@ -149,7 +160,12 @@ def process_anin(nidq: nap.TsdFrame, mic_denoised: nap.Tsd | None = None) -> nap
     return anin
 
 
-def build_spike_times(nwb_nap, ks_suffix: str, surface_location=None) -> nap.TsGroup:
+def build_spike_times(
+    nwb_nap: nap.NWBFile,
+    ks_suffix: str,
+    *,
+    surface_location: SurfaceLocation = None,
+) -> nap.TsGroup:
     """
     Build spike times from the NWB file.
     Args:
@@ -222,7 +238,7 @@ def build_spike_times(nwb_nap, ks_suffix: str, surface_location=None) -> nap.TsG
     merged = nap.TsGroup.merge_group(*probes, reset_index=False, reset_time_support=True)
     return merged
 
-def select_ks_keys(nwb_nap, ks_suffix: str) -> list[str]:
+def select_ks_keys(nwb_nap: nap.NWBFile, ks_suffix: str) -> list[str]:
     # 1) Keep only spike-sorting groups ("TsGroup") that are probe-specific.
     # Example key: "catgt_NP69_B1_g0_imec1_KS4_Th=8".
     tsgroup_keys = []
@@ -273,7 +289,11 @@ def get_rec_base_num(rec_id: str) -> int:
     return int(subject_number * 1e7 + block_number * 1e5)
 
 
-def convert_cortical_depth(unit_meta, surface_location, probe_index: int):
+def convert_cortical_depth(
+    unit_meta: Any,
+    surface_location: SurfaceLocation,
+    probe_index: int,
+) -> Any:
     """Convert y-coordinate (distance-to-tip) to cortical depth."""
     if "y" not in unit_meta.columns:
         print("Skipping cortical depth conversion because spike_times.metadata has no 'y' coordinate column.")
@@ -293,7 +313,7 @@ def convert_cortical_depth(unit_meta, surface_location, probe_index: int):
 
     return unit_meta
 
-def parse_surface_location(surface_location) -> np.ndarray:
+def parse_surface_location(surface_location: SurfaceLocation) -> np.ndarray | float:
     """Normalize surface locations to a numeric probe array."""
     # Use the default when the input is missing
     if surface_location is None:
@@ -322,9 +342,10 @@ def parse_surface_location(surface_location) -> np.ndarray:
 
 def save_nap_dataset(
     output_dir: str | Path,
-    nap_objects: dict[str, Any] | None = None,
-    metadata: dict[str, dict[str, Any]] | None = None,
-):
+    *,
+    nap_objects: Mapping[str, Any] | None = None,
+    metadata: Mapping[str, Mapping[str, Any]] | None = None,
+) -> None:
     """Save nap objects to npz files and metadata to json files."""
     from manyfunpy.data.mnap import save_nap_objects
     output_dir = Path(output_dir)

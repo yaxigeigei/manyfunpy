@@ -1,6 +1,8 @@
 """NMF clustering helpers."""
 
 import warnings
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal
 
 import numpy as np
 from joblib import Parallel, delayed, parallel_config
@@ -8,7 +10,14 @@ from sklearn.decomposition import NMF
 from sklearn.exceptions import ConvergenceWarning
 
 
-def prepare_nonnegative_matrix(X, neg_conversion="zero"):
+NegConversion = Literal["zero", "concat", "abs"]
+
+
+def prepare_nonnegative_matrix(
+    X: np.ndarray,
+    *,
+    neg_conversion: NegConversion = "zero",
+) -> tuple[np.ndarray, int]:
     """Return an NMF-ready matrix, optionally concatenating negative features."""
     # Normalize values before converting signed inputs into nonnegative features.
     X = np.asarray(X, dtype=float)
@@ -28,7 +37,11 @@ def prepare_nonnegative_matrix(X, neg_conversion="zero"):
     return X_clean, component_n_bins
 
 
-def balanced_group_sample_weights(groups, group_totals=None):
+def balanced_group_sample_weights(
+    groups: np.ndarray,
+    *,
+    group_totals: Mapping[Any, float] | None = None,
+) -> np.ndarray:
     """Compute inverse group-size weights for each sample."""
     # Use observed sample counts unless external pre-filter group totals are supplied.
     groups = np.asarray(groups)
@@ -51,16 +64,17 @@ def balanced_group_sample_weights(groups, group_totals=None):
 
 
 def bootstrap_gap_nmf(
-    X,
-    sample_weights=None,
-    k_list=tuple(range(1, 11)),
-    n_boot=50,
-    fraction=0.9,
-    n_refs=20,
-    n_jobs=6,
-    random_state=61,
-    neg_conversion="zero",
-):
+    X: np.ndarray,
+    *,
+    sample_weights: np.ndarray | None = None,
+    k_list: Sequence[int] = tuple(range(1, 11)),
+    n_boot: int = 50,
+    fraction: float = 0.9,
+    n_refs: int = 20,
+    n_jobs: int = 6,
+    random_state: int = 61,
+    neg_conversion: NegConversion = "zero",
+) -> dict[str, Any]:
     """Run a weighted bootstrap gap-statistic sweep for pooled NMF clustering."""
     # Prepare nonnegative features and fold sample weights into the fitted matrix.
     X, component_n_bins = prepare_nonnegative_matrix(
@@ -220,18 +234,19 @@ def bootstrap_gap_nmf(
 
 
 def fit_nmf_clusters(
-    X,
-    sample_weights=None,
-    n_components=None,
-    component_n_bins=None,
-    random_state=61,
-    neg_conversion="zero",
-    k_list=tuple(range(1, 11)),
-    n_boot=50,
-    fraction=0.9,
-    n_refs=20,
-    n_jobs=6,
-):
+    X: np.ndarray,
+    *,
+    sample_weights: np.ndarray | None = None,
+    n_components: int | None = None,
+    component_n_bins: int | None = None,
+    random_state: int = 61,
+    neg_conversion: NegConversion = "zero",
+    k_list: Sequence[int] = tuple(range(1, 11)),
+    n_boot: int = 50,
+    fraction: float = 0.9,
+    n_refs: int = 20,
+    n_jobs: int = 6,
+) -> dict[str, Any]:
     """Fit weighted pooled NMF and assign each sample to its dominant component."""
     # Prepare raw input unless the caller already supplied an NMF-ready matrix.
     if component_n_bins is None:

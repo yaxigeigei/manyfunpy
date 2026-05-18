@@ -5,21 +5,29 @@ This module provides functions to format matplotlib figures and axes
 according to publication standards, similar to MATLAB's plotting utilities.
 """
 
-import numpy as np
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any, Literal
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.collections import PatchCollection
+from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
-from typing import Union, Optional, List
+import numpy as np
+
+
+FigureOrAxes = Figure | Axes
 
 
 def savefig(
-    fig,
-    out_path,
-    extensions: str | list[str] = None,
-    is_verbose=True,
-    ):
+    fig: Figure,
+    out_path: str | Path,
+    *,
+    extensions: str | Sequence[str] | None = None,
+    is_verbose: bool = True,
+) -> None:
     """
     Save a figure to a file.
     """
@@ -40,14 +48,15 @@ def savefig(
 
 
 def paperize(
-    h: Optional[Union[plt.Figure, plt.Axes, List[Union[plt.Figure, plt.Axes]]]] = None,
-    cols_wide: Optional[float] = None,
-    cols_high: Optional[float] = None,
+    h: FigureOrAxes | Sequence[FigureOrAxes] | None = None,
+    *,
+    cols_wide: float | None = None,
+    cols_high: float | None = None,
     font_size: float = 6,
     font_name: str = 'DejaVu Sans',
     zoom: float = 2,
-    aspect_ratio: Optional[float] = None,
-    journal_style: str = 'cell'
+    aspect_ratio: float | None = None,
+    journal_style: Literal["nature", "cell"] = "cell",
 ) -> None:
     """
     Make axes comply with conventions of publication.
@@ -98,9 +107,11 @@ def paperize(
             all_axes.extend(fig.get_axes())
         h = all_axes
     
-    # Ensure h is a list
-    if not isinstance(h, list):
+    # Ensure h is a list.
+    if isinstance(h, (Figure, Axes)):
         h = [h]
+    else:
+        h = list(h)
     
     # Calculate figure width if cols_wide is specified
     fig_width = None
@@ -108,7 +119,7 @@ def paperize(
         fig_width = width_set[0] * cols_wide
     
     for handle in h:
-        if isinstance(handle, plt.Figure):
+        if isinstance(handle, Figure):
             fig = handle
             
             if fig_width is not None:
@@ -133,7 +144,7 @@ def paperize(
             # Get all axes in the figure
             axes_list = fig.get_axes()
         
-        elif isinstance(handle, plt.Axes):
+        elif isinstance(handle, Axes):
             axes_list = [handle]
         
         else:
@@ -156,17 +167,18 @@ def paperize(
 
 
 def plot_interval_blocks(
-    ax,
-    x_ranges,
-    y_centers=None,
-    heights=None,
-    y_ranges=None,
-    colors=None,
-    alpha=1.0,
-    edgecolor="none",
-    linewidth=0,
-    zorder=None,
-):
+    ax: Axes,
+    x_ranges: np.ndarray | Sequence[Sequence[float]],
+    *,
+    y_centers: np.ndarray | Sequence[float] | None = None,
+    heights: np.ndarray | Sequence[float] | None = None,
+    y_ranges: np.ndarray | Sequence[Sequence[float]] | None = None,
+    colors: object | None = None,
+    alpha: float = 1.0,
+    edgecolor: object = "none",
+    linewidth: float = 0,
+    zorder: float | None = None,
+) -> PatchCollection:
     """
     Plot interval blocks as a patch collection of rectangles.
     """
@@ -206,7 +218,7 @@ def plot_interval_blocks(
     ax.add_collection(collection)
     return collection
 
-def get_journal_dimensions(journal_style: str = 'cell') -> dict:
+def get_journal_dimensions(journal_style: Literal["nature", "cell"] = "cell") -> dict[str, float]:
     """
     Get standard column widths for different journals.
     
@@ -240,7 +252,15 @@ def get_journal_dimensions(journal_style: str = 'cell') -> dict:
     return journal_styles[journal_style]
 
 
-def axxplane(ax, coord, color=None, alpha=None, ylim=None, zlim=None):
+def axxplane(
+    ax: Any,
+    coord: float,
+    *,
+    color: object | None = None,
+    alpha: float | None = None,
+    ylim: Sequence[float] | None = None,
+    zlim: Sequence[float] | None = None,
+) -> Any:
     """
     Plot planes at a specified value (x = constant)
     """
@@ -250,7 +270,16 @@ def axxplane(ax, coord, color=None, alpha=None, ylim=None, zlim=None):
     X_plane = np.full_like(Y_plane, float(coord))
     return axplane(ax, X_plane, Y_plane, Z_plane, color=color, alpha=alpha)
 
-def axyplane(ax, coord, color=None, alpha=None, xlim=None, zlim=None):
+
+def axyplane(
+    ax: Any,
+    coord: float,
+    *,
+    color: object | None = None,
+    alpha: float | None = None,
+    xlim: Sequence[float] | None = None,
+    zlim: Sequence[float] | None = None,
+) -> Any:
     """
     Plot planes at a specified value (y = constant)
     """
@@ -260,7 +289,16 @@ def axyplane(ax, coord, color=None, alpha=None, xlim=None, zlim=None):
     Y_plane = np.full_like(X_plane, float(coord))
     return axplane(ax, X_plane, Y_plane, Z_plane, color=color, alpha=alpha)
 
-def axzplane(ax, coord, color=None, alpha=None, xlim=None, ylim=None):
+
+def axzplane(
+    ax: Any,
+    coord: float,
+    *,
+    color: object | None = None,
+    alpha: float | None = None,
+    xlim: Sequence[float] | None = None,
+    ylim: Sequence[float] | None = None,
+) -> Any:
     """
     Plot planes at a specified value (z = constant)
     """
@@ -270,7 +308,16 @@ def axzplane(ax, coord, color=None, alpha=None, xlim=None, ylim=None):
     Z_plane = np.full_like(X_plane, float(coord))
     return axplane(ax, X_plane, Y_plane, Z_plane, color=color, alpha=alpha)
 
-def axplane(ax, X_plane, Y_plane, Z_plane, color, alpha):
+
+def axplane(
+    ax: Any,
+    X_plane: np.ndarray,
+    Y_plane: np.ndarray,
+    Z_plane: np.ndarray,
+    *,
+    color: object | None,
+    alpha: float | None,
+) -> Any:
     if color is None:
         color = (0.5, 0.5, 0.5)
     if alpha is None:
