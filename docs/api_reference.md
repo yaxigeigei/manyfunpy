@@ -24,6 +24,7 @@ save_pickle(obj: Any, path: str | Path) -> None
 ```
 
 Thin pickle helpers for notebook and analysis workflows.
+Paths ending in `.gz`, such as `features.pkl.gz`, are read and written with gzip compression.
 
 ## GUI
 
