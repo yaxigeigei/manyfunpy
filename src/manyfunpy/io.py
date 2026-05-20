@@ -5,8 +5,16 @@ IO utility functions
 """
 import gzip
 import pickle
-from pathlib import Path
+from pathlib import Path, WindowsPath
 from typing import Any
+
+
+class WindowsPathUnpickler(pickle.Unpickler):
+    # Load POSIX-authored path objects on Windows.
+    def find_class(self, module, name):
+        if (module, name) == ("pathlib", "PosixPath"):
+            return WindowsPath
+        return super().find_class(module, name)
 
 
 def load_pickle(path: str | Path) -> Any:
@@ -14,7 +22,7 @@ def load_pickle(path: str | Path) -> Any:
     # Load serialized object.
     path = Path(path)
     with _open_pickle(path, "rb") as f:
-        return pickle.load(f)
+        return WindowsPathUnpickler(f).load()
 
 
 def save_pickle(obj: Any, path: str | Path) -> None:
