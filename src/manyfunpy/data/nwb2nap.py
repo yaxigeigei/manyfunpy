@@ -342,7 +342,6 @@ def parse_surface_location(surface_location: SurfaceLocation) -> np.ndarray | fl
 
 def save_nap_dataset(
     output_dir: str | Path,
-    *,
     nap_objects: Mapping[str, Any] | None = None,
     metadata: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> None:
