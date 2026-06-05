@@ -234,8 +234,15 @@ def build_spike_times(
 
         probes.append(probe)
     
-    # Merge probes
-    merged = nap.TsGroup.merge_group(*probes, reset_index=False, reset_time_support=True)
+    # Merge probes and keep metadata columns from all sorting outputs
+    metadata = pd.concat([probe.metadata.drop(columns=["rate"]) for probe in probes])
+    merged = nap.TsGroup.merge_group(
+        *probes,
+        reset_index=False,
+        reset_time_support=True,
+        ignore_metadata=True,
+        )
+    merged.set_info(metadata)
     return merged
 
 def select_ks_keys(nwb_nap: nap.NWBFile, ks_suffix: str) -> list[str]:
