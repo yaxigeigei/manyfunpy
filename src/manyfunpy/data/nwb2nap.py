@@ -202,8 +202,8 @@ def build_spike_times(
         sort_dir_name = re.search(r"(NP\d+_B\d+_.+)$", sort_name).group(1)  # capture starting from rec ID
         si_dir = Path(f'/data_store2/neuropixels/preproc/{rec_id}/kilosort/{run_name}/{sort_dir_name}/SI/sparse')
         if si_dir.exists():
-            analyzer = load_sorting_analyzer(si_dir)
-            coords = analyzer.get_extension("unit_locations").get_data()
+            analyzer = load_sorting_analyzer(si_dir, load_extensions=False)
+            coords = analyzer.load_extension("unit_locations").get_data()
             coords_df = pd.DataFrame(coords, index=analyzer.unit_ids, columns=["x", "y", "z"])
             probe_meta = probe_meta.join(coords_df)
         else:
