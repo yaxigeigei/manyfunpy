@@ -13,7 +13,6 @@ TimeInterpolant = Callable[[np.ndarray], np.ndarray]
 def save_nap_objects(
     nap_objects: Mapping[str, Any],
     output_dir: str | Path,
-    *,
     verbose: bool = False,
 ) -> None:
     """Save pynapple data to a directory."""
@@ -50,7 +49,6 @@ def _remove_dir_with_retries(path: Path, retries: int = 8, delay_s: float = 0.25
 def warp_nap(
     nap_data: Mapping[str, Any],
     interpolant: TimeInterpolant,
-    *,
     sample_rate: float | None = None,
 ) -> dict[str, Any]:
     """
@@ -78,7 +76,6 @@ def warp_nap(
 def warp_tsd(
     tsd: nap.Tsd,
     interpolant: TimeInterpolant,
-    *,
     sample_rate: float | None = None,
 ) -> nap.Tsd:
     """
@@ -110,7 +107,6 @@ def warp_tsd(
 def warp_tsdframe(
     tsdframe: nap.TsdFrame,
     interpolant: TimeInterpolant,
-    *,
     sample_rate: float | None = None,
 ) -> nap.TsdFrame:
     """

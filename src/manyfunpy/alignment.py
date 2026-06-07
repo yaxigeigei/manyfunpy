@@ -49,7 +49,6 @@ def matched_index_pairs(seq1: Iterable[Token], seq2: Iterable[Token]) -> tuple[n
 def align_tokens(
     seq1: Iterable[Token],
     seq2: Iterable[Token],
-    *,
     gap: object | None = None,
 ) -> tuple[list[object], list[object]]:
     """

@@ -24,7 +24,6 @@ FigureOrAxes = Figure | Axes
 def savefig(
     fig: Figure,
     out_path: str | Path,
-    *,
     extensions: str | Sequence[str] | None = None,
     is_verbose: bool = True,
 ) -> None:
@@ -49,7 +48,6 @@ def savefig(
 
 def paperize(
     h: FigureOrAxes | Sequence[FigureOrAxes] | None = None,
-    *,
     cols_wide: float | None = None,
     cols_high: float | None = None,
     font_size: float = 6,
@@ -169,7 +167,6 @@ def paperize(
 def plot_interval_blocks(
     ax: Axes,
     x_ranges: np.ndarray | Sequence[Sequence[float]],
-    *,
     y_centers: np.ndarray | Sequence[float] | None = None,
     heights: np.ndarray | Sequence[float] | None = None,
     y_ranges: np.ndarray | Sequence[Sequence[float]] | None = None,
@@ -255,7 +252,6 @@ def get_journal_dimensions(journal_style: Literal["nature", "cell"] = "cell") ->
 def axxplane(
     ax: Any,
     coord: float,
-    *,
     color: object | None = None,
     alpha: float | None = None,
     ylim: Sequence[float] | None = None,
@@ -274,7 +270,6 @@ def axxplane(
 def axyplane(
     ax: Any,
     coord: float,
-    *,
     color: object | None = None,
     alpha: float | None = None,
     xlim: Sequence[float] | None = None,
@@ -293,7 +288,6 @@ def axyplane(
 def axzplane(
     ax: Any,
     coord: float,
-    *,
     color: object | None = None,
     alpha: float | None = None,
     xlim: Sequence[float] | None = None,
@@ -314,7 +308,6 @@ def axplane(
     X_plane: np.ndarray,
     Y_plane: np.ndarray,
     Z_plane: np.ndarray,
-    *,
     color: object | None,
     alpha: float | None,
 ) -> Any:

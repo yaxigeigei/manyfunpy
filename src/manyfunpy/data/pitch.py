@@ -56,7 +56,7 @@ def enrich_pitch(
     return nap.TsdFrame(t=t, d=data, columns=columns)
 
 
-def bin_pitch(r_f0: np.ndarray, *, n_bins: int = 10) -> tuple[np.ndarray, np.ndarray]:
+def bin_pitch(r_f0: np.ndarray, n_bins: int = 10) -> tuple[np.ndarray, np.ndarray]:
     finite = np.isfinite(r_f0)
     bins = np.full((r_f0.shape[0], n_bins), np.nan)
     if finite.sum() == 0:

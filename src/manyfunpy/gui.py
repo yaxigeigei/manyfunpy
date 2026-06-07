@@ -19,7 +19,6 @@ SelectionItem = TypeVar("SelectionItem")
 def create_selection_dialog(
     title: str,
     items: Sequence[SelectionItem],
-    *,
     multiple: bool = True,
 ) -> list[SelectionItem]:
     """Create a dialog with listbox for selection

@@ -19,7 +19,6 @@ SurfaceLocation = float | str | Sequence[float] | np.ndarray | None
 
 def convert_nwb_to_nap(
     nwb: str | Path | nap.NWBFile, 
-    *,
     ks_suffix: SpikeSortSuffix = "_KS4_Th=8",
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     """
@@ -120,7 +119,6 @@ def convert_nwb_to_nap(
 
 def process_anin(
     nidq: nap.TsdFrame,
-    *,
     mic_denoised: nap.Tsd | None = None,
 ) -> nap.TsdFrame:
     """Process the analog input data."""
@@ -163,7 +161,6 @@ def process_anin(
 def build_spike_times(
     nwb_nap: nap.NWBFile,
     ks_suffix: str,
-    *,
     surface_location: SurfaceLocation = None,
 ) -> nap.TsGroup:
     """

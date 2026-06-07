@@ -15,7 +15,6 @@ NegConversion = Literal["zero", "concat", "abs"]
 
 def prepare_nonnegative_matrix(
     X: np.ndarray,
-    *,
     neg_conversion: NegConversion = "zero",
 ) -> tuple[np.ndarray, int]:
     """Return an NMF-ready matrix, optionally concatenating negative features."""
@@ -39,7 +38,6 @@ def prepare_nonnegative_matrix(
 
 def balanced_group_sample_weights(
     groups: np.ndarray,
-    *,
     group_totals: Mapping[Any, float] | None = None,
 ) -> np.ndarray:
     """Compute inverse group-size weights for each sample."""
@@ -65,7 +63,6 @@ def balanced_group_sample_weights(
 
 def bootstrap_gap_nmf(
     X: np.ndarray,
-    *,
     sample_weights: np.ndarray | None = None,
     k_list: Sequence[int] = tuple(range(1, 11)),
     n_boot: int = 50,
@@ -235,7 +232,6 @@ def bootstrap_gap_nmf(
 
 def fit_nmf_clusters(
     X: np.ndarray,
-    *,
     sample_weights: np.ndarray | None = None,
     n_components: int | None = None,
     component_n_bins: int | None = None,
