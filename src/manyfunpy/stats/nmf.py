@@ -67,6 +67,7 @@ def bootstrap_gap_nmf(
     k_list: Sequence[int] = tuple(range(1, 11)),
     n_boot: int = 50,
     fraction: float = 0.9,
+    max_boot_units: float = np.inf,
     n_refs: int = 20,
     n_jobs: int = 6,
     random_state: int = 61,
@@ -180,7 +181,7 @@ def bootstrap_gap_nmf(
 
     # Run the full-data sweep and bootstrap sweep with bounded inner threads.
     n_units = X_weighted.shape[0]
-    n_sample = int(np.round(n_units * fraction))
+    n_sample = int(min(np.round(n_units * fraction), max_boot_units))
     with parallel_config(backend="loky", inner_max_num_threads=1):
         full_results = Parallel(
             n_jobs=min(n_jobs, len(k_list)),
@@ -225,6 +226,7 @@ def bootstrap_gap_nmf(
         "opti_k": int(np.median(boot_optimal_k)),
         "neg_conversion": neg_conversion,
         "component_n_bins": component_n_bins,
+        "max_boot_units": max_boot_units,
     }
 
     return summary
@@ -240,6 +242,7 @@ def fit_nmf_clusters(
     k_list: Sequence[int] = tuple(range(1, 11)),
     n_boot: int = 50,
     fraction: float = 0.9,
+    max_boot_units: float = np.inf,
     n_refs: int = 20,
     n_jobs: int = 6,
 ) -> dict[str, Any]:
@@ -269,6 +272,7 @@ def fit_nmf_clusters(
             k_list=k_list,
             n_boot=n_boot,
             fraction=fraction,
+            max_boot_units=max_boot_units,
             n_refs=n_refs,
             n_jobs=n_jobs,
             random_state=random_state,
