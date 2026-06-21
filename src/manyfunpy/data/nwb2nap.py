@@ -197,14 +197,16 @@ def build_spike_times(
         # Add unit locations on probe
         run_name = re.search(r"^(\w+_g\d+)", sort_name).group(1)  # capture up to g0
         sort_dir_name = re.search(r"(NP\d+_B\d+_.+)$", sort_name).group(1)  # capture starting from rec ID
-        si_dir = Path(f'/data_store2/neuropixels/preproc/{rec_id}/kilosort/{run_name}/{sort_dir_name}/SI/sparse')
-        if si_dir.exists():
-            analyzer = load_sorting_analyzer(si_dir, load_extensions=False)
-            coords = analyzer.load_extension("unit_locations").get_data()
-            coords_df = pd.DataFrame(coords, index=analyzer.unit_ids, columns=["x", "y", "z"])
-            probe_meta = probe_meta.join(coords_df)
+        si_root = Path(f"/data_store2/neuropixels/preproc/{rec_id}/kilosort/{run_name}/{sort_dir_name}/SI")
+        for si_dir in [si_root / "sparse", si_root / "dense"]:
+            if (si_dir / "extensions" / "unit_locations").exists():
+                analyzer = load_sorting_analyzer(si_dir, load_extensions=False)
+                coords = analyzer.load_extension("unit_locations").get_data()
+                coords_df = pd.DataFrame(coords, index=analyzer.unit_ids, columns=["x", "y", "z"])
+                probe_meta = probe_meta.join(coords_df)
+                break
         else:
-            print(f"Cannot add unit locations because {si_dir} does not exist.")
+            print(f"Cannot find unit locations data in {si_root}.")
         
         # Convert cortical depth
         probe_meta = convert_cortical_depth(probe_meta, surface_location, probe_index)
@@ -360,4 +362,3 @@ def save_nap_dataset(
         for name, meta in metadata.items():
             with open(output_dir / f"{name}.json", "w", encoding="utf-8") as stream:
                 json.dump(meta, stream, indent=2)
-
