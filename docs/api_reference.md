@@ -89,13 +89,13 @@ bin_pitch(r_f0: np.ndarray, n_bins: int = 10) -> tuple[np.ndarray, np.ndarray]
 
 ```python
 save_nap_objects(nap_objects: Mapping[str, Any], output_dir: str | Path, verbose=False) -> None
-warp_nap(nap_data: Mapping[str, Any], interpolant, sample_rate=None) -> dict[str, Any]
-warp_tsd(tsd: nap.Tsd, interpolant, sample_rate=None) -> nap.Tsd
-warp_tsdframe(tsdframe: nap.TsdFrame, interpolant, sample_rate=None) -> nap.TsdFrame
-warp_interval_set(interval_set: nap.IntervalSet, interpolant) -> nap.IntervalSet
+warp_nap(nap_data: Mapping[str, Any], interpolant, sample_rate=None, round_decimals=6) -> dict[str, Any]
+warp_tsd(tsd: nap.Tsd, interpolant, round_decimals=6) -> nap.Tsd
+warp_tsdframe(tsdframe: nap.TsdFrame, interpolant, sample_rate=None, round_decimals=6) -> nap.TsdFrame
+warp_interval_set(interval_set: nap.IntervalSet, interpolant, round_decimals=6) -> nap.IntervalSet
 ```
 
-The warping helpers expect an interpolant callable that maps old timestamps to new timestamps. `warp_nap` handles dictionaries containing `Tsd`, `TsdFrame`, and `IntervalSet` values and leaves unsupported values unchanged.
+The warping helpers expect an interpolant callable that maps old timestamps to new timestamps. `warp_nap` handles dictionaries containing `Tsd`, `TsdFrame`, and `IntervalSet` values and leaves unsupported values unchanged. Warped timestamps are rounded with `np.round(t, round_decimals)` by default; pass `round_decimals=None` to keep full precision.
 
 ### NWB Conversion
 

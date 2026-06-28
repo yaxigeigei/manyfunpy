@@ -50,6 +50,7 @@ def warp_nap(
     nap_data: Mapping[str, Any],
     interpolant: TimeInterpolant,
     sample_rate: float | None = None,
+    round_decimals: int | None = 6,
 ) -> dict[str, Any]:
     """
     Build time-warped nap dictionary by warping all supported fields.
@@ -58,16 +59,42 @@ def warp_nap(
     - pynapple.Tsd
     - pynapple.TsdFrame
     - pynapple.IntervalSet
+
+    Args:
+        nap_data:
+            Dictionary of pynapple objects and pass-through values.
+        interpolant:
+            Callable mapping old timestamps to warped timestamps.
+        sample_rate:
+            Output sampling rate in Hz for binned TsdFrame objects.
+        round_decimals:
+            Number of decimals for np.round on warped timestamps.
+
+    Returns:
+        Time-warped dictionary with unsupported values unchanged.
     """
     # Apply interpolant across data containers
     warped_data = {}
     for key, value in nap_data.items():
         if isinstance(value, nap.Tsd):
-            warped_data[key] = warp_tsd(value, interpolant, sample_rate=sample_rate)
+            warped_data[key] = warp_tsd(
+                value,
+                interpolant,
+                round_decimals=round_decimals,
+            )
         elif isinstance(value, nap.TsdFrame):
-            warped_data[key] = warp_tsdframe(value, interpolant, sample_rate=sample_rate)
+            warped_data[key] = warp_tsdframe(
+                value,
+                interpolant,
+                sample_rate=sample_rate,
+                round_decimals=round_decimals,
+            )
         elif isinstance(value, nap.IntervalSet):
-            warped_data[key] = warp_interval_set(value, interpolant)
+            warped_data[key] = warp_interval_set(
+                value,
+                interpolant,
+                round_decimals=round_decimals,
+            )
         else:
             warped_data[key] = value
     
@@ -76,31 +103,35 @@ def warp_nap(
 def warp_tsd(
     tsd: nap.Tsd,
     interpolant: TimeInterpolant,
-    sample_rate: float | None = None,
+    round_decimals: int | None = 6,
 ) -> nap.Tsd:
     """
     Apply a time-warping interpolant to transform timestamps in a Tsd.
+
+    Args:
+        tsd:
+            Input one-dimensional time series.
+        interpolant:
+            Callable mapping old timestamps to warped timestamps.
+        round_decimals:
+            Number of decimals for np.round on warped timestamps.
+
+    Returns:
+        Warped Tsd with rounded timestamps.
     """
     warped_times = interpolant(tsd.times())
-    warped_support = warp_interval_set(tsd.time_support, interpolant)
+    if round_decimals is not None:
+        warped_times = np.round(warped_times, round_decimals)
+    warped_support = warp_interval_set(
+        tsd.time_support,
+        interpolant,
+        round_decimals=round_decimals,
+    )
     warped_tsd = nap.Tsd(
         t=warped_times,
         d=tsd.values,
         time_support=warped_support,
     )
-
-    if sample_rate is not None:
-        warped_tsd = warped_tsd.bin_average(1 / sample_rate)
-        t = warped_tsd.times()
-        d = warped_tsd.values.copy()
-        valid = np.isfinite(d)
-        if valid.any():
-            d = np.interp(t, t[valid], d[valid])
-        warped_tsd = nap.Tsd(
-            t=t,
-            d=d,
-            time_support=warped_tsd.time_support,
-        )
 
     return warped_tsd
 
@@ -108,12 +139,32 @@ def warp_tsdframe(
     tsdframe: nap.TsdFrame,
     interpolant: TimeInterpolant,
     sample_rate: float | None = None,
+    round_decimals: int | None = 6,
 ) -> nap.TsdFrame:
     """
     Apply a time-warping interpolant to transform timestamps in a TsdFrame.
+
+    Args:
+        tsdframe:
+            Input time-by-variable frame.
+        interpolant:
+            Callable mapping old timestamps to warped timestamps.
+        sample_rate:
+            Output sampling rate in Hz after warping.
+        round_decimals:
+            Number of decimals for np.round on warped timestamps.
+
+    Returns:
+        Warped TsdFrame with rounded timestamps.
     """
     warped_times = interpolant(tsdframe.times())
-    warped_support = warp_interval_set(tsdframe.time_support, interpolant)
+    if round_decimals is not None:
+        warped_times = np.round(warped_times, round_decimals)
+    warped_support = warp_interval_set(
+        tsdframe.time_support,
+        interpolant,
+        round_decimals=round_decimals,
+    )
     warped_tsdframe = nap.TsdFrame(
         t=warped_times,
         d=tsdframe.values,
@@ -125,6 +176,14 @@ def warp_tsdframe(
     if sample_rate is not None:
         warped_tsdframe = warped_tsdframe.bin_average(1 / sample_rate)
         t = warped_tsdframe.times()
+        time_support = warped_tsdframe.time_support
+        if round_decimals is not None:
+            t = np.round(t, round_decimals)
+            time_support = nap.IntervalSet(
+                start=np.round(time_support.start, round_decimals),
+                end=np.round(time_support.end, round_decimals),
+                metadata=time_support.metadata.copy(),
+            )
         d = warped_tsdframe.values.copy()
         for i in range(d.shape[1]):
             valid = np.isfinite(d[:, i])
@@ -134,7 +193,7 @@ def warp_tsdframe(
             t=t,
             d=d,
             columns=warped_tsdframe.columns,
-            time_support=warped_tsdframe.time_support,
+            time_support=time_support,
             metadata=warped_tsdframe.metadata.copy(),
         )
     
@@ -143,12 +202,27 @@ def warp_tsdframe(
 def warp_interval_set(
     interval_set: nap.IntervalSet,
     interpolant: TimeInterpolant,
+    round_decimals: int | None = 6,
 ) -> nap.IntervalSet:
     """
     Applying a time-warping interpolant to transform timestamps in an IntervalSet.
+
+    Args:
+        interval_set:
+            Input interval table.
+        interpolant:
+            Callable mapping old timestamps to warped timestamps.
+        round_decimals:
+            Number of decimals for np.round on warped timestamps.
+
+    Returns:
+        Warped IntervalSet with rounded starts and ends.
     """
-    starts = interpolant(np.asarray(interval_set.start, dtype=float))
-    ends = interpolant(np.asarray(interval_set.end, dtype=float))
+    starts = interpolant(interval_set.start)
+    ends = interpolant(interval_set.end)
+    if round_decimals is not None:
+        starts = np.round(starts, round_decimals)
+        ends = np.round(ends, round_decimals)
     warped_interval_set = nap.IntervalSet(
         start=starts,
         end=ends,
