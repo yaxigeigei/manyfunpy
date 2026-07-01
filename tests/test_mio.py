@@ -1,7 +1,7 @@
 import gzip
 import pickle
 
-from manyfunpy.io import load_pickle, save_pickle
+from manyfunpy.mio import load_pickle, save_pickle
 
 
 def test_save_and_load_pickle_round_trip(tmp_path):

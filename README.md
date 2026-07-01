@@ -9,10 +9,11 @@ Work in progress.
 ## Organization
 
 - `manyfunpy.alignment`: longest-common-subsequence token alignment and matched timestamp helpers.
-- `manyfunpy.io`: small pickle load/save helpers.
-- `manyfunpy.gui`: Tk selection dialogs for interactive workflows.
+- `manyfunpy.mio`: small pickle load/save helpers.
+- `manyfunpy.mgui`: Tk selection dialogs for interactive workflows.
+- `manyfunpy.mnap`: pynapple container saving and time-warping utilities.
 - `manyfunpy.mplot`: matplotlib publication formatting, interval blocks, and 3D plane helpers.
-- `manyfunpy.data`: pynapple-oriented audio, pitch, articulation, NWB conversion, and time-warping utilities.
+- `manyfunpy.preproc`: pynapple-oriented audio, pitch, articulation, and NWB conversion helpers.
 - `manyfunpy.stats`: statistical helpers, currently focused on pooled NMF clustering.
 
 ## Installation

@@ -32,7 +32,7 @@ def convert_nwb_to_nap(
     Returns:
         tuple[dict[str, Any], dict[str, dict[str, Any]]]: A tuple containing the nap objects and metadata.
     """
-    from manyfunpy.data.audio import compute_mel_spectrogram
+    from manyfunpy.preproc.audio import compute_mel_spectrogram
 
     # Load NWB
     if isinstance(nwb, str) or isinstance(nwb, Path):
@@ -78,7 +78,7 @@ def convert_nwb_to_nap(
         nap_objects.update({"intensity": intensity})
     
     if "pitch" in nwb_nap:
-        from manyfunpy.data.pitch import enrich_pitch
+        from manyfunpy.preproc.pitch import enrich_pitch
         pitch = enrich_pitch(
             nwb_nap["pitch"],
             stim_intervals=nap_objects["mfa_stim"],
@@ -87,12 +87,12 @@ def convert_nwb_to_nap(
         nap_objects.update({"pitch": pitch})
 
     if "artics" in nwb_nap:
-        from manyfunpy.data.artic import enrich_artic
+        from manyfunpy.preproc.artic import enrich_artic
         artic = enrich_artic(nwb_nap["artics"])
         nap_objects.update({"artic": artic})
 
     if "artics_new" in nwb_nap:
-        from manyfunpy.data.artic import build_artic2
+        from manyfunpy.preproc.artic import build_artic2
         artic2 = build_artic2(nwb_nap["artics_new"])
         nap_objects.update({"artic2": artic2})
 
@@ -122,7 +122,7 @@ def process_anin(
     mic_denoised: nap.Tsd | None = None,
 ) -> nap.TsdFrame:
     """Process the analog input data."""
-    from manyfunpy.data.audio import estimate_sample_rate, highpass_speech
+    from manyfunpy.preproc.audio import estimate_sample_rate, highpass_speech
 
     t_nidq = nidq.times()
     fs_nidq = estimate_sample_rate(t_nidq)
@@ -352,7 +352,7 @@ def save_nap_dataset(
     metadata: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> None:
     """Save nap objects to npz files and metadata to json files."""
-    from manyfunpy.data.mnap import save_nap_objects
+    from manyfunpy.mnap import save_nap_objects
     output_dir = Path(output_dir)
 
     if nap_objects is not None:

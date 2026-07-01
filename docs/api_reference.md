@@ -16,7 +16,7 @@ Use these helpers to align token sequences with a longest-common-subsequence pat
 
 ## IO
 
-Import from `manyfunpy.io`.
+Import from `manyfunpy.mio`.
 
 ```python
 load_pickle(path: str | Path) -> Any
@@ -28,7 +28,7 @@ Paths ending in `.gz`, such as `features.pkl.gz`, are read and written with gzip
 
 ## GUI
 
-Import from `manyfunpy.gui`.
+Import from `manyfunpy.mgui`.
 
 ```python
 create_selection_dialog(title: str, items: Sequence[T], multiple: bool = True) -> list[T]
@@ -53,9 +53,9 @@ axplane(ax, X_plane, Y_plane, Z_plane, color, alpha) -> Any
 
 `paperize` formats matplotlib figures or axes for compact publication figures. `plot_interval_blocks` draws many rectangular intervals efficiently as one patch collection. The plane helpers add constant-value planes to 3D matplotlib axes.
 
-## Data
+## Preprocessing
 
-Data helpers live under `manyfunpy.data`.
+Preprocessing helpers live under `manyfunpy.preproc`.
 
 ### Audio
 
@@ -85,7 +85,9 @@ bin_pitch(r_f0: np.ndarray, n_bins: int = 10) -> tuple[np.ndarray, np.ndarray]
 
 `enrich_pitch` adds relative F0, derivatives, voicing, proxy phrase/accent tracks, and binned relative-F0 columns.
 
-### Pynapple Containers
+## Pynapple Containers
+
+Import from `manyfunpy.mnap`.
 
 ```python
 save_nap_objects(nap_objects: Mapping[str, Any], output_dir: str | Path, verbose=False) -> None
