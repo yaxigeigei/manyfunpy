@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 from pathlib import Path
 import numpy as np
+import pandas as pd
 import pynapple as nap
 
 
@@ -28,6 +29,98 @@ def save_nap_objects(
         value.save(output_dir / f"{key}.npz")
         if verbose:
             print(f"Saved {output_dir / f'{key}.npz'}")
+
+
+def load_tsgroup_npz(
+    path: str | Path,
+    keys=None,
+) -> nap.TsGroup:
+    """
+    Load selected keys from a pynapple TsGroup npz file.
+
+    Args:
+        path:
+            Path to a TsGroup npz file saved by pynapple.
+        keys:
+            Optional TsGroup keys to load.
+
+    Returns:
+        A TsGroup containing only the requested keys.
+    """
+    # Load the flattened TsGroup arrays
+    with np.load(Path(path), allow_pickle=True) as file:
+        if "type" in file.files:
+            assert str(file["type"][0]) == "TsGroup"
+        times = file["t"]
+        index = file["index"]
+        available_keys = file["keys"] if "keys" in file.files else np.unique(index)
+        selected_keys = available_keys if keys is None else np.atleast_1d(keys)
+        missing_keys = np.setdiff1d(selected_keys, available_keys)
+        assert len(missing_keys) == 0, f"Missing TsGroup keys: {missing_keys.tolist()}"
+        time_support = nap.IntervalSet(file["start"], file["end"])
+
+        # Build the selected Ts or Tsd objects
+        has_data = "d" in file.files
+        is_selected = np.isin(index, selected_keys)
+        selected_times = times[is_selected]
+        selected_index = index[is_selected]
+        if has_data:
+            selected_data = file["d"][is_selected]
+        group = {}
+        for key in selected_keys:
+            is_key = selected_index == key
+            if has_data:
+                group[key] = nap.Tsd(
+                    t=selected_times[is_key],
+                    d=selected_data[is_key],
+                    time_support=time_support,
+                )
+            else:
+                group[key] = nap.Ts(
+                    t=selected_times[is_key],
+                    time_support=time_support,
+                )
+
+        # Rebuild the TsGroup and selected metadata
+        ts_group = nap.TsGroup(group, time_support=time_support, bypass_check=True)
+        ts_group_keys = np.asarray(list(ts_group.keys()))
+        ts_group_key_positions = np.asarray([
+            np.flatnonzero(available_keys == key)[0]
+            for key in ts_group_keys
+        ], dtype=int)
+        if "_metadata" in file.files and file["_metadata"].size:
+            metadata = file["_metadata"].item()
+            if metadata:
+                if isinstance(next(iter(metadata.values())), dict):
+                    metadata = pd.DataFrame.from_dict(metadata).loc[ts_group_keys]
+                else:
+                    metadata = {
+                        key: np.asarray(value)[ts_group_key_positions]
+                        for key, value in metadata.items()
+                    }
+                ts_group.set_info(metadata)
+
+        # Add legacy metadata arrays that are stored outside _metadata
+        metadata = {}
+        not_info_keys = {
+            "start",
+            "end",
+            "t",
+            "index",
+            "d",
+            "rate",
+            "keys",
+            "_metadata",
+            "type",
+        }
+        for key in set(file.files) - not_info_keys:
+            value = file[key]
+            if len(value) == len(available_keys):
+                metadata[key] = value[ts_group_key_positions]
+        ts_group.set_info(**metadata)
+
+    return ts_group
+
 
 def _remove_dir_with_retries(path: Path, retries: int = 8, delay_s: float = 0.25) -> None:
     """Remove a directory, retrying around transient Windows file locks."""
