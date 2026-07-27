@@ -119,6 +119,7 @@ def paperize(
     for handle in h:
         if isinstance(handle, Figure):
             fig = handle
+            legends = list(fig.legends)
             
             if fig_width is not None:
                 # Set figure properties
@@ -141,9 +142,14 @@ def paperize(
             
             # Get all axes in the figure
             axes_list = fig.get_axes()
+
+            # Set figure-level text font properties
+            for text in fig.texts:
+                text.set_fontfamily(font_name)
         
         elif isinstance(handle, Axes):
             axes_list = [handle]
+            legends = []
         
         else:
             raise TypeError("Handle must be Figure or Axes object")
@@ -154,7 +160,8 @@ def paperize(
             ax.tick_params(direction='out', which='both')
             
             # Set font properties
-            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label] +
+            for item in ([ax.title, ax.xaxis.label, ax.yaxis.label,
+                          ax.xaxis.get_offset_text(), ax.yaxis.get_offset_text()] +
                         ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontfamily(font_name)
                 item.set_fontsize(font_size * zoom)
@@ -162,6 +169,17 @@ def paperize(
             # Set spine properties
             for spine in ax.spines.values():
                 spine.set_linewidth(0.5)
+
+            # Collect axes-level legends
+            legend = ax.get_legend()
+            if legend is not None:
+                legends.append(legend)
+
+        # Set legend font properties
+        for legend in legends:
+            for text in [legend.get_title(), *legend.get_texts()]:
+                text.set_fontfamily(font_name)
+                text.set_fontsize(font_size * zoom)
 
 
 def plot_interval_blocks(

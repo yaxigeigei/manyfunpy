@@ -156,6 +156,7 @@ def test_bootstrap_gap_nmf_summary_shapes():
         "opti_k",
         "neg_conversion",
         "component_n_bins",
+        "max_boot_units",
     }
     assert expected_keys == set(summary)
     assert summary["full_gap"].shape == (2,)
@@ -168,6 +169,7 @@ def test_bootstrap_gap_nmf_summary_shapes():
     assert summary["opti_k"] in (1, 2)
     assert summary["neg_conversion"] == "zero"
     assert summary["component_n_bins"] == X.shape[1]
+    assert np.isinf(summary["max_boot_units"])
 
 
 def test_bootstrap_gap_nmf_keeps_negative_values_by_splitting():
